@@ -3,15 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LayoutDashboard, Trees, Hammer, Compass, Settings, User, Trophy, Home, Sprout, Map as MapIcon, Moon, Sun } from 'lucide-react';
-import { useMockSupabase } from './lib/mockSupabase';
+import { Compass, Settings, User, Trophy, Home, Sprout, Map as MapIcon, Moon, Sun } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import {
+  useSupabaseRealtimeXP,
+  useMoodColor,
+  useUserPreferences,
+  usePillars,
+  useLogXP,
+  useCSSVariables,
+  calculateSpriteScale,
+  calculateTierOpacities,
+  hexToRgb,
+} from './hooks';
 import { FrontYard } from './components/FrontYard';
 import { Greenhouse } from './components/Greenhouse';
 import { Garden } from './components/Garden';
@@ -19,14 +25,19 @@ import { Guide } from './components/Guide';
 import { Sprite } from './components/Sprite';
 import { Background3D } from './components/Background3D';
 import { Dashboard } from './components/Dashboard';
-import { InputType, Archetype, SpriteTier, Aesthetic } from './types';
+import { InputType, Aesthetic, Archetype } from './types';
 import { cn } from './lib/utils';
 
-export default function App() {
-  const { preferences, pillars, playbooks, setPlaybooks, addXP, getMoodColor } = useMockSupabase();
+function AppContent() {
+  const { user, isLoading: authLoading } = useAuth();
+  const { pillars, loading: pillarsLoading } = usePillars();
+  const { xpLogs, totalXP, spriteTier } = useSupabaseRealtimeXP(user?.id || null);
+  const { preferences } = useUserPreferences(user?.id || null);
+  const { moodColor } = useMoodColor(user?.id || null);
+  const { logXP, isLoading: xpLoading } = useLogXP(user?.id || null);
+
   const [activeZone, setActiveZone] = useState<string>('front-yard');
   const [guideIsOpen, setGuideIsOpen] = useState(false);
-  const [archetype, setArchetype] = useState<Archetype>(Archetype.GARDENER);
   const [aesthetic, setAesthetic] = useState<Aesthetic>(Aesthetic.HOBBIT);
   const [isLight, setIsLight] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,35 +47,47 @@ export default function App() {
     document.body.className = `theme-hobbit ${isLight ? 'theme-light' : ''}`;
   }, [isLight]);
 
-  const moodColor = getMoodColor();
+  // Sync realtime data to CSS variables for SVG animations
+  const tierOpacities = calculateTierOpacities(spriteTier);
+  const rgb = hexToRgb(moodColor);
 
-  const handleCapture = (pillarId: string, type: InputType) => {
-    setIsProcessing(true);
-    // Simulate gnome filing...
-    setTimeout(() => {
-      addXP(pillarId, 25, type);
+  useCSSVariables({
+    '--sprite-scale': calculateSpriteScale(totalXP),
+    '--spore-opacity': tierOpacities.spore,
+    '--spark-opacity': tierOpacities.spark,
+    '--kin-opacity': tierOpacities.kin,
+    '--architect-opacity': tierOpacities.architect,
+    '--sprite-mood-r': rgb.r.toString(),
+    '--sprite-mood-g': rgb.g.toString(),
+    '--sprite-mood-b': rgb.b.toString(),
+    '--glow-intensity': isProcessing ? '0.5' : '0.2',
+  });
+
+  const handleCapture = async (pillarId: string, type: InputType) => {
+    try {
+      setIsProcessing(true);
+      await logXP(pillarId, 25, type);
+      // Realtime subscription handles UI update automatically
+    } catch (error) {
+      console.error('Failed to log XP:', error);
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
 
-  const handleCreatePlaybook = (pillarId: string) => {
-    const newPlaybook = {
-      id: Math.random().toString(36).substr(2, 9),
-      user_id: preferences.user_id,
-      pillar_id: pillarId,
-      title: 'New Seedling',
-      objective: 'Define your logic here.',
-      status: 'draft' as const,
-      completion_score: 0,
-      last_updated: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-    };
-    setPlaybooks(prev => [...prev, newPlaybook]);
-    addXP(pillarId, 50, InputType.TEXT);
+  const handleCreatePlaybook = async (pillarId: string) => {
+    try {
+      // TODO: Implement Supabase playbook creation
+      // For now, log XP as a placeholder
+      await logXP(pillarId, 50, InputType.TEXT);
+    } catch (error) {
+      console.error('Failed to create playbook:', error);
+    }
   };
 
   const handleUpdatePlaybook = (id: string, updates: any) => {
-    setPlaybooks(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    // TODO: Implement Supabase playbook update
+    console.log('Update playbook:', id, updates);
   };
 
   const navItems = [
@@ -121,14 +144,14 @@ export default function App() {
           <div className="flex flex-col items-end">
              <div className="flex items-center gap-2">
                 <div className="w-24 h-1.5 glass rounded-full overflow-hidden">
-                   <motion.div 
+                   <motion.div
                     className="h-full bg-gradient-to-r from-cyan-500 to-amber-500"
-                    animate={{ width: `${(preferences.total_xp % 2500) / 25}%` }}
+                    animate={{ width: `${(totalXP % 2500) / 25}%` }}
                    />
                 </div>
-                <span className="text-[10px] font-mono text-amber-500">{preferences.total_xp} XP</span>
+                <span className="text-[10px] font-mono text-amber-500">{totalXP} XP</span>
              </div>
-             <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest mt-1">Tier {preferences.sprite_tier} Energy</span>
+             <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest mt-1">Tier {spriteTier} Energy</span>
           </div>
           
           <button className="p-3 rounded-full glass hover:bg-white/10 transition-colors">
@@ -155,8 +178,16 @@ export default function App() {
             className="absolute inset-0"
           >
             {activeZone === 'front-yard' && (
-              <FrontYard 
-                preferences={preferences} 
+              <FrontYard
+                preferences={preferences || {
+                  user_id: user?.id || '',
+                  total_xp: totalXP,
+                  active_archetype: Archetype.GARDENER,
+                  sprite_tier: spriteTier,
+                  last_interaction: new Date().toISOString(),
+                  theme_preference: 'system',
+                  current_theme: isLight ? 'light' : 'dark',
+                }}
                 moodColor={moodColor}
                 pillars={pillars}
                 onCapture={handleCapture}
@@ -167,9 +198,9 @@ export default function App() {
               />
             )}
             {activeZone === 'greenhouse' && (
-              <Greenhouse 
+              <Greenhouse
                 pillars={pillars}
-                playbooks={playbooks}
+                playbooks={[]}
                 onUpdatePlaybook={handleUpdatePlaybook}
                 onCreatePlaybook={handleCreatePlaybook}
                 aesthetic={aesthetic}
@@ -186,14 +217,22 @@ export default function App() {
       </main>
 
       {/* Overlays */}
-      <Guide 
-        isOpen={guideIsOpen} 
-        onClose={() => setGuideIsOpen(false)} 
-        preferences={preferences}
+      <Guide
+        isOpen={guideIsOpen}
+        onClose={() => setGuideIsOpen(false)}
+        preferences={preferences || {
+          user_id: user?.id || '',
+          total_xp: totalXP,
+          active_archetype: Archetype.GARDENER,
+          sprite_tier: spriteTier,
+          last_interaction: new Date().toISOString(),
+          theme_preference: 'system',
+          current_theme: isLight ? 'light' : 'dark',
+        }}
         pillars={pillars}
-        playbooks={playbooks}
+        playbooks={[]}
       />
-      
+
       {/* Sprite Hover Portal (Always present if not in front yard) */}
       {activeZone !== 'front-yard' && (
         <div className="fixed bottom-6 left-6 z-[60] pointer-events-none">
@@ -201,7 +240,7 @@ export default function App() {
              <div className="relative">
                 <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full" />
                 <div className="transform scale-50 origin-bottom-left transition-all hover:scale-75 active:scale-60">
-                   <Sprite tier={preferences.sprite_tier} moodColor={moodColor} isResting={activeZone === 'greenhouse'} aesthetic={aesthetic} />
+                   <Sprite tier={spriteTier} moodColor={moodColor} isResting={activeZone === 'greenhouse'} aesthetic={aesthetic} />
                 </div>
              </div>
           </div>
@@ -239,5 +278,13 @@ export default function App() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

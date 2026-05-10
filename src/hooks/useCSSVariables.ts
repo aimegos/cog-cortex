@@ -16,7 +16,7 @@ interface CSSVariables {
  * This is the bridge between Supabase realtime data and SVG rendering.
  */
 export const useCSSVariables = (variables: CSSVariables) => {
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Debounce updates to prevent excessive DOM operations
