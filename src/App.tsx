@@ -31,6 +31,8 @@ import { cn } from './lib/utils';
 
 function AppContent() {
   const { user, isLoading: authLoading } = useAuth();
+
+  // Always call hooks - even if user is null (they return safe defaults)
   const { pillars, loading: pillarsLoading } = usePillars();
   const { xpLogs, totalXP, spriteTier } = useSupabaseRealtimeXP(user?.id || null);
   const { preferences } = useUserPreferences(user?.id || null);
