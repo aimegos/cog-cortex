@@ -26,6 +26,7 @@ import { Guide } from './components/Guide';
 import { Sprite } from './components/Sprite';
 import { Background3D } from './components/Background3D';
 import { Dashboard } from './components/Dashboard';
+import { CaptureModal } from './components/CaptureModal';
 import { InputType, Aesthetic, Archetype } from './types';
 import { cn } from './lib/utils';
 
@@ -44,6 +45,9 @@ function AppContent() {
   const [aesthetic, setAesthetic] = useState<Aesthetic>(Aesthetic.HOBBIT);
   const [isLight, setIsLight] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [captureModalOpen, setCaptureModalOpen] = useState(false);
+  const [captureType, setCaptureType] = useState<InputType | null>(null);
+  const [capturePillarId, setCapturePillarId] = useState<string | null>(null);
 
   // Sync theme to body class for global CSS targeting
   useEffect(() => {
@@ -91,13 +95,20 @@ function AppContent() {
     );
   }
 
-  const handleCapture = async (pillarId: string, type: InputType) => {
+  const handleCapture = (pillarId: string, type: InputType) => {
+    setCapturePillarId(pillarId);
+    setCaptureType(type);
+    setCaptureModalOpen(true);
+  };
+
+  const handleCaptureSubmit = async (content: string) => {
+    if (!capturePillarId) return;
     try {
       setIsProcessing(true);
-      await logXP(pillarId, 25, type);
-      // Realtime subscription handles UI update automatically
+      await logXP(capturePillarId, 25, captureType || InputType.TEXT);
     } catch (error) {
       console.error('Failed to log XP:', error);
+      throw error;
     } finally {
       setIsProcessing(false);
     }
@@ -305,6 +316,19 @@ function AppContent() {
           Personal OS v1.0 • Built for Flow
         </p>
       </div>
+
+      {/* Capture Modal */}
+      <CaptureModal
+        type={captureType}
+        isOpen={captureModalOpen}
+        onClose={() => {
+          setCaptureModalOpen(false);
+          setCaptureType(null);
+          setCapturePillarId(null);
+        }}
+        onSubmit={handleCaptureSubmit}
+        isLoading={isProcessing}
+      />
     </div>
   );
 }
