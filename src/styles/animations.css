@@ -1,0 +1,166 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Root CSS Variables for Sprite Animations */
+:root {
+  /* XP-based scaling */
+  --sprite-scale: 1;
+
+  /* Tier visibility flags (0 or 1) */
+  --spore-opacity: 1;
+  --spark-opacity: 0;
+  --kin-opacity: 0;
+  --architect-opacity: 0;
+
+  /* Mood color mapping (RGB components) */
+  --sprite-mood-r: 255;
+  --sprite-mood-g: 255;
+  --sprite-mood-b: 255;
+
+  /* Glow and effects */
+  --glow-intensity: 0.2;
+  --glow-blur: 20px;
+  --glow-duration: 2s;
+
+  /* Resting state override */
+  --is-resting: 0;
+  --is-thinking: 0;
+
+  /* Animation speeds */
+  --pulse-duration: 2s;
+  --float-duration: 3s;
+  --breath-duration: 10s;
+}
+
+/* Sprite Core Animations */
+@keyframes sprite-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(calc(var(--sprite-scale) * 1.05));
+    opacity: 0.9;
+  }
+}
+
+@keyframes sprite-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes sprite-breath {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.5;
+  }
+}
+
+@keyframes sprite-thinking {
+  0%,
+  100% {
+    transform: scale(0.95);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
+@keyframes sprite-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 var(--glow-blur) rgb(var(--sprite-mood-r), var(--sprite-mood-g), var(--sprite-mood-b)))
+            brightness(1);
+    opacity: var(--glow-intensity);
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--glow-blur) * 1.5) rgb(var(--sprite-mood-r), var(--sprite-mood-g), var(--sprite-mood-b)))
+            brightness(1.1);
+    opacity: calc(var(--glow-intensity) * 1.5);
+  }
+}
+
+/* Tier visibility animations */
+.sprite-spore {
+  opacity: var(--spore-opacity);
+  transition: opacity 0.6s ease-in-out;
+}
+
+.sprite-spark {
+  opacity: var(--spark-opacity);
+  transition: opacity 0.6s ease-in-out;
+}
+
+.sprite-kin {
+  opacity: var(--kin-opacity);
+  transition: opacity 0.6s ease-in-out;
+}
+
+.sprite-architect {
+  opacity: var(--architect-opacity);
+  transition: opacity 0.6s ease-in-out;
+}
+
+/* Main Sprite Container */
+.cortex-sprite {
+  transform: scale(var(--sprite-scale));
+  transition: transform 0.3s ease-out;
+}
+
+.cortex-sprite .sprite-core {
+  animation: sprite-glow var(--glow-duration) ease-in-out infinite;
+}
+
+.cortex-sprite.is-floating .sprite-core {
+  animation: sprite-float var(--float-duration) ease-in-out infinite;
+}
+
+/* Resting state (Greenhouse view) */
+.cortex-sprite.is-resting .sprite-core {
+  animation: sprite-breath var(--breath-duration) ease-in-out infinite !important;
+  opacity: calc(var(--spore-opacity) * 0.3 + var(--spark-opacity) * 0.4 + var(--kin-opacity) * 0.5) !important;
+}
+
+/* Thinking state (loading) */
+.cortex-sprite.is-thinking .sprite-core {
+  animation: sprite-thinking calc(var(--breath-duration) * 0.6) ease-in-out infinite;
+  opacity: 0.4;
+}
+
+/* Smooth color transitions */
+.sprite-color {
+  fill: rgb(var(--sprite-mood-r), var(--sprite-mood-g), var(--sprite-mood-b));
+  transition: fill 0.8s ease-out;
+}
+
+.sprite-filter {
+  transition: filter 0.8s ease-out;
+}
+
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .cortex-sprite .sprite-core,
+  .cortex-sprite.is-floating .sprite-core,
+  .cortex-sprite.is-resting .sprite-core,
+  .cortex-sprite.is-thinking .sprite-core,
+  .sprite-color,
+  .sprite-filter {
+    animation: none !important;
+    transition: none !important;
+  }
+}

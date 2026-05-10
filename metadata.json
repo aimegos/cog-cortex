@@ -1,0 +1,13 @@
+{
+  "name": "The Cognitive Cortex",
+  "description": "A neuro-affirming personal operating system for entrepreneurs. A set-and-forget garden for executive function, gamifying life management through pillars, playbooks, and a responsive AI sprite.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "AI Mentorship",
+    "Gamified Task Tracking",
+    "Google Drive Integration",
+    "Cognitive Signature Analysis"
+  ]
+}
