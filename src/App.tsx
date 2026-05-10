@@ -18,6 +18,7 @@ import {
   calculateTierOpacities,
   hexToRgb,
 } from './hooks';
+import { AuthScreen } from './components/AuthScreen';
 import { FrontYard } from './components/FrontYard';
 import { Greenhouse } from './components/Greenhouse';
 import { Garden } from './components/Garden';
@@ -41,6 +42,31 @@ function AppContent() {
   const [aesthetic, setAesthetic] = useState<Aesthetic>(Aesthetic.HOBBIT);
   const [isLight, setIsLight] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Show auth screen if not logged in and auth has loaded
+  if (!authLoading && !user) {
+    return <AuthScreen />;
+  }
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#1a1c1a]">
+        <div className="text-center">
+          <motion.div
+            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="w-4 h-4 rounded-full bg-white animate-pulse" />
+            </div>
+          </motion.div>
+          <p className="text-white/60 font-mono text-sm tracking-widest">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Sync theme to body class for global CSS targeting
   useEffect(() => {
