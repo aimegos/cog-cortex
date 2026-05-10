@@ -17,6 +17,7 @@ interface FrontYardProps {
 
 export const FrontYard = ({ preferences, moodColor, pillars, onCapture, onOpenGuide, guideState, aesthetic, isLight }: FrontYardProps) => {
   const isHobbit = aesthetic === Aesthetic.HOBBIT;
+  const capturePillarId = pillars[0]?.id;
   // Weather state based on system "health"
   // Mock logic: if XP > 1000 and total items > 5 then Sunny
   const systemHealth = preferences.total_xp > 1000 ? 'sunny' : 'overcast';
@@ -86,11 +87,13 @@ export const FrontYard = ({ preferences, moodColor, pillars, onCapture, onOpenGu
               key={action.id}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => onCapture(pillars[0].id, action.id as InputType)}
+              onClick={() => capturePillarId && onCapture(capturePillarId, action.id as InputType)}
+              disabled={!capturePillarId}
               className={cn(
                 "p-6 rounded-3xl flex flex-col items-center gap-3 group transition-all",
                 isHobbit ? "glass-hobbit" : "glass hover:bg-white/10",
-                isLight && !isHobbit && "bg-black/5 hover:bg-black/10"
+                isLight && !isHobbit && "bg-black/5 hover:bg-black/10",
+                !capturePillarId && "opacity-50 cursor-not-allowed"
               )}
             >
               <div className={cn(

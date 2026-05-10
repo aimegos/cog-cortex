@@ -21,14 +21,7 @@ export const useUserPreferences = (userId: string | null) => {
   });
 
   const fetchPreferences = useCallback(async () => {
-    if (!userId) {
-      setState({
-        preferences: null,
-        loading: false,
-        error: null,
-      });
-      return;
-    }
+    if (!userId) return;
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));

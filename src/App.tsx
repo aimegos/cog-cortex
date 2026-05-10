@@ -45,6 +45,27 @@ function AppContent() {
   const [isLight, setIsLight] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Sync theme to body class for global CSS targeting
+  useEffect(() => {
+    document.body.className = `theme-hobbit ${isLight ? 'theme-light' : ''}`;
+  }, [isLight]);
+
+  // Sync realtime data to CSS variables for SVG animations
+  const tierOpacities = calculateTierOpacities(spriteTier);
+  const rgb = hexToRgb(moodColor);
+
+  useCSSVariables({
+    '--sprite-scale': calculateSpriteScale(totalXP),
+    '--spore-opacity': tierOpacities.spore,
+    '--spark-opacity': tierOpacities.spark,
+    '--kin-opacity': tierOpacities.kin,
+    '--architect-opacity': tierOpacities.architect,
+    '--sprite-mood-r': rgb.r.toString(),
+    '--sprite-mood-g': rgb.g.toString(),
+    '--sprite-mood-b': rgb.b.toString(),
+    '--glow-intensity': isProcessing ? '0.5' : '0.2',
+  });
+
   // Show auth screen if not logged in and auth has loaded
   if (!authLoading && !user) {
     return <AuthScreen />;
@@ -69,27 +90,6 @@ function AppContent() {
       </div>
     );
   }
-
-  // Sync theme to body class for global CSS targeting
-  useEffect(() => {
-    document.body.className = `theme-hobbit ${isLight ? 'theme-light' : ''}`;
-  }, [isLight]);
-
-  // Sync realtime data to CSS variables for SVG animations
-  const tierOpacities = calculateTierOpacities(spriteTier);
-  const rgb = hexToRgb(moodColor);
-
-  useCSSVariables({
-    '--sprite-scale': calculateSpriteScale(totalXP),
-    '--spore-opacity': tierOpacities.spore,
-    '--spark-opacity': tierOpacities.spark,
-    '--kin-opacity': tierOpacities.kin,
-    '--architect-opacity': tierOpacities.architect,
-    '--sprite-mood-r': rgb.r.toString(),
-    '--sprite-mood-g': rgb.g.toString(),
-    '--sprite-mood-b': rgb.b.toString(),
-    '--glow-intensity': isProcessing ? '0.5' : '0.2',
-  });
 
   const handleCapture = async (pillarId: string, type: InputType) => {
     try {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Flower, Trees, FlaskRound as Flask, Shovel, Info, Map as MapIcon, Layers } from 'lucide-react';
 import { Pillar, Aesthetic } from '../types';
@@ -10,16 +10,40 @@ interface GardenProps {
 }
 
 export const Garden = ({ pillars, aesthetic }: GardenProps) => {
-  const [activeZoneId, setActiveZoneId] = useState<string>(pillars[1].id);
+  const [activeZoneId, setActiveZoneId] = useState<string>('');
 
-  const zones = [
-    { id: pillars[0].id, name: pillars[0].name, icon: Flower, color: 'text-amber-400', bg: 'rgba(251, 191, 36, 0.05)', pillar: 'Essentials' },
-    { id: pillars[1].id, name: pillars[1].name, icon: Trees, color: 'text-emerald-400', bg: 'rgba(52, 211, 153, 0.05)', pillar: 'Career' },
-    { id: pillars[2].id, name: pillars[2].name, icon: Flask, color: 'text-sky-400', bg: 'rgba(6, 182, 212, 0.05)', pillar: 'Lifestyle' },
+  const zoneStyles = [
+    { icon: Flower, color: 'text-amber-400', bg: 'rgba(251, 191, 36, 0.05)' },
+    { icon: Trees, color: 'text-emerald-400', bg: 'rgba(52, 211, 153, 0.05)' },
+    { icon: Flask, color: 'text-sky-400', bg: 'rgba(6, 182, 212, 0.05)' },
   ];
+
+  const zones = pillars.slice(0, 3).map((pillar, index) => ({
+    id: pillar.id,
+    name: pillar.name,
+    pillar: pillar.name,
+    ...zoneStyles[index],
+  }));
 
   const activeZone = zones.find(z => z.id === activeZoneId) || zones[0];
   const isHobbit = aesthetic === Aesthetic.HOBBIT;
+
+  useEffect(() => {
+    if (!activeZoneId && zones[0]) {
+      setActiveZoneId(zones[0].id);
+    }
+  }, [activeZoneId, zones]);
+
+  if (!activeZone) {
+    return (
+      <div className={cn(
+        "h-full flex items-center justify-center",
+        isHobbit ? "bg-[#151815]" : "bg-[#020202]"
+      )}>
+        <p className="text-[10px] font-mono text-white/20 uppercase tracking-[0.3em]">Loading cognitive map...</p>
+      </div>
+    );
+  }
 
   return (
     <div className={cn(

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, ChevronRight, FileEdit, FolderPlus, Search, Info } from 'lucide-react';
 import Markdown from 'react-markdown';
@@ -14,7 +14,7 @@ interface GreenhouseProps {
 }
 
 export const Greenhouse = ({ pillars, playbooks, onUpdatePlaybook, onCreatePlaybook, aesthetic }: GreenhouseProps) => {
-  const [selectedPillarId, setSelectedPillarId] = useState<string | null>(pillars[1].id);
+  const [selectedPillarId, setSelectedPillarId] = useState<string | null>(null);
   const [activePlaybookId, setActivePlaybookId] = useState<string | null>(null);
 
   const selectedPillar = pillars.find(p => p.id === selectedPillarId);
@@ -22,6 +22,17 @@ export const Greenhouse = ({ pillars, playbooks, onUpdatePlaybook, onCreatePlayb
   const activePlaybook = playbooks.find(p => p.id === activePlaybookId);
 
   const isHobbit = aesthetic === Aesthetic.HOBBIT;
+
+  useEffect(() => {
+    if (pillars.length === 0) {
+      setSelectedPillarId(null);
+      return;
+    }
+
+    if (!selectedPillar || !selectedPillarId) {
+      setSelectedPillarId(pillars[1]?.id ?? pillars[0].id);
+    }
+  }, [pillars, selectedPillar, selectedPillarId]);
 
   return (
     <div className={cn(
@@ -73,6 +84,7 @@ export const Greenhouse = ({ pillars, playbooks, onUpdatePlaybook, onCreatePlayb
           </div>
           <button 
             onClick={() => selectedPillarId && onCreatePlaybook(selectedPillarId)}
+            disabled={!selectedPillarId}
             className={cn("p-3 rounded-full transition-colors", isHobbit ? "glass-hobbit" : "glass hover:bg-white/10")}
           >
             <Plus className="w-5 h-5" />

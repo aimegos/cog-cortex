@@ -20,14 +20,7 @@ export const useMoodColor = (userId: string | null) => {
   });
 
   const fetchMoodColor = useCallback(async () => {
-    if (!userId) {
-      setState({
-        moodColor: '#FFFFFF',
-        loading: false,
-        error: null,
-      });
-      return;
-    }
+    if (!userId) return;
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));

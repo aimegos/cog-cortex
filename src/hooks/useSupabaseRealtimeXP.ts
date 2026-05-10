@@ -25,34 +25,24 @@ export const useSupabaseRealtimeXP = (userId: string | null) => {
   });
 
   const fetchXPData = useCallback(async () => {
-    if (!userId) {
-      setState({
-        xpLogs: [],
-        totalXP: 0,
-        spriteTier: 0,
-        loading: false,
-        error: null,
-      });
-      return;
-    }
+    // Always call setstate - only skip fetch if no userId
+    if (!userId) return;
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
 
-      // Fetch current inputs
       const { data: xpLogs, error: logsError } = await supabaseClient
         .from('inputs_tracker')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
         .order('created_at', { ascending: false });
 
       if (logsError) throw logsError;
 
-      // Fetch user preferences for total XP and tier
       const { data: prefs, error: prefsError } = await supabaseClient
         .from('user_preferences')
         .select('total_xp, sprite_tier')
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
         .single();
 
       if (prefsError && prefsError.code !== 'PGRST116') throw prefsError;

@@ -14,8 +14,9 @@ interface GuideProps {
 }
 
 export const Guide = ({ isOpen, onClose, preferences, pillars, playbooks }: GuideProps) => {
+  const focusPillarName = pillars[1]?.name ?? pillars[0]?.name ?? 'garden';
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; text: string }[]>([
-    { role: 'bot', text: `Welcome to the Hut. I notice your ${pillars[1].name} orchard is showing strong growth patterns today. How can I observe your cortex with you?` }
+    { role: 'bot', text: `Welcome to the Hut. I notice your ${focusPillarName} orchard is showing strong growth patterns today. How can I observe your cortex with you?` }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
