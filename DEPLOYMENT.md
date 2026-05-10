@@ -83,10 +83,22 @@ npm run dev
 - Follow Option A (Dashboard) again
 - Make sure you copied the ENTIRE supabase_schema.sql file
 
-### "RLS policies blocking access"
-- The policies in the schema default to DENY all
-- Make sure you're logged in with a valid Supabase auth session
-- Policies allow users to access only their own data
+### "RLS policies blocking access" or "No pillars showing"
+- **If pillars aren't loading:** The pillars table needs RLS disabled (it's public read-only data)
+- Run this in Supabase SQL Editor:
+  ```sql
+  ALTER TABLE pillars DISABLE ROW LEVEL SECURITY;
+  
+  INSERT INTO pillars (name, slug, description, base_color, icon) VALUES
+  ('Essentials', 'essentials', 'Core tech stack, passwords, and administrative must-dos.', '#64748b', 'shield'),
+  ('Career', 'career', 'Client leads, project deliverables, and networking.', '#06b6d4', 'briefcase'),
+  ('Lifestyle', 'lifestyle', 'Household management, groceries, and travel.', '#f59e0b', 'home'),
+  ('Health', 'health', 'Medical appointments, insurance, and nutrient tracking.', '#10b981', 'heart'),
+  ('Fulfillment', 'fulfillment', 'Personal growth, hobbies, and learning.', '#a855f7', 'zap'),
+  ('Relationships', 'relationships', 'Family milestones, kids appointments, and network management.', '#ec4899', 'users')
+  ON CONFLICT DO NOTHING;
+  ```
+- For other tables, policies allow users to access only their own data
 
 ### "Realtime not updating"
 - Your Supabase project may be on Free tier

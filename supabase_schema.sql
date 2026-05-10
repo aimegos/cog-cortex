@@ -136,7 +136,10 @@ INSERT INTO pillars (name, slug, description, base_color, icon) VALUES
 ('Relationships', 'relationships', 'Family milestones, kids appointments, and network management.', '#ec4899', 'users')
 ON CONFLICT DO NOTHING;
 
--- 8. Row Level Security (RLS) example
+-- 8. Row Level Security (RLS)
+-- Pillars are public read-only data
+ALTER TABLE pillars DISABLE ROW LEVEL SECURITY;
+
 ALTER TABLE playbooks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can only access their own playbooks" ON playbooks
     FOR ALL USING (auth.uid() = user_id);
