@@ -9,6 +9,14 @@ import { Mail, Lock, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 
+const getFriendlyAuthError = (message: string) => {
+  if (message.toLowerCase().includes('invalid login credentials')) {
+    return 'No account matched those credentials. Create an account first, or check the email and password.';
+  }
+
+  return message;
+};
+
 export const AuthScreen = () => {
   const { signIn, signUp, isLoading, error } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -16,10 +24,12 @@ export const AuthScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    setNotice(null);
 
     if (!email || !password) {
       setLocalError('Please fill in all fields');
@@ -37,19 +47,28 @@ export const AuthScreen = () => {
       }
 
       try {
-        await signUp(email, password);
+        const result = await signUp(email, password);
         setEmail('');
         setPassword('');
         setConfirmPassword('');
-        setMode('signin');
+        if (result.needsEmailConfirmation) {
+          setNotice('Account created. Check your email to confirm it, then sign in.');
+          setMode('signin');
+        } else {
+          setNotice('Account created. You are signed in now.');
+        }
       } catch (err) {
-        setLocalError(err instanceof Error ? err.message : 'Sign up failed');
+        setLocalError(
+          err instanceof Error ? getFriendlyAuthError(err.message) : 'Sign up failed'
+        );
       }
     } else {
       try {
         await signIn(email, password);
       } catch (err) {
-        setLocalError(err instanceof Error ? err.message : 'Sign in failed');
+        setLocalError(
+          err instanceof Error ? getFriendlyAuthError(err.message) : 'Sign in failed'
+        );
       }
     }
   };
@@ -111,6 +130,9 @@ export const AuthScreen = () => {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -128,6 +150,9 @@ export const AuthScreen = () => {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
               <input
                 type="password"
+                name="password"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -146,6 +171,9 @@ export const AuthScreen = () => {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <input
                   type="password"
+                  name="confirm-password"
+                  autoComplete="new-password"
+                  required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
@@ -164,8 +192,18 @@ export const AuthScreen = () => {
             >
               <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
               <p className="text-xs text-red-300 font-mono">
-                {error?.message || localError}
+                {localError || (error ? getFriendlyAuthError(error.message) : null)}
               </p>
+            </motion.div>
+          )}
+
+          {notice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+            >
+              <p className="text-xs text-emerald-200 font-mono">{notice}</p>
             </motion.div>
           )}
 
@@ -204,6 +242,7 @@ export const AuthScreen = () => {
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin');
               setLocalError(null);
+              setNotice(null);
               setEmail('');
               setPassword('');
               setConfirmPassword('');
@@ -214,7 +253,7 @@ export const AuthScreen = () => {
           </button>
         </div>
 
-        {/* Demo Credentials */}
+        {/* Account Setup */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -222,13 +261,10 @@ export const AuthScreen = () => {
           className="mt-8 p-4 bg-white/5 border border-white/10 rounded-lg"
         >
           <p className="text-xs font-mono text-white/50 mb-2 uppercase tracking-widest">
-            Test Account:
-          </p>
-          <p className="text-xs text-white/40 font-mono mb-1">
-            Email: <span className="text-emerald-400">test@example.com</span>
+            First Time Here?
           </p>
           <p className="text-xs text-white/40 font-mono">
-            Password: <span className="text-emerald-400">password123</span>
+            Create an account before signing in. Supabase Auth stores real users per project, so demo credentials only work after that user exists.
           </p>
         </motion.div>
       </motion.div>

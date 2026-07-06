@@ -12,7 +12,7 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   error: Error | null;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -72,32 +72,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signUp = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
       setError(null);
-      const { error } = await supabaseClient.auth.signUp({
+      const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
       });
 
       if (error) throw error;
 
-      // Create user_preferences record
-      const { data } = await supabaseClient.auth.getSession();
-      if (data?.session?.user?.id) {
-        await supabaseClient.from('user_preferences').insert({
-          user_id: data.session.user.id,
-          total_xp: 0,
-          active_archetype: 'gardener',
-          sprite_tier: 0,
-        });
-      }
+      return { needsEmailConfirmation: !data.session };
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign up failed'));
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
       setError(null);
       const { error } = await supabaseClient.auth.signInWithPassword({
         email,
@@ -108,17 +103,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign in failed'));
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       setError(null);
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw error;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign out failed'));
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 

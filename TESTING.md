@@ -16,21 +16,17 @@ npm run dev
 
 Visit: http://localhost:3000
 
-### 2. Sign In
+### 2. Create an Account, Then Sign In
 
-Use the test account or create a new one:
-
-**Demo Account:**
-- Email: `test@example.com`
-- Password: `password123`
-
-**Or Create New Account:**
 1. Click "Create Account"
 2. Enter email and password
 3. Confirm password
 4. Click "Create Account"
+5. If email confirmation is enabled in Supabase, confirm the email address.
 
-Then sign in with those credentials.
+Then sign in with the same credentials.
+
+Supabase Auth users are project-specific. Do not assume `test@example.com` exists unless you created it in the current Supabase project.
 
 ---
 

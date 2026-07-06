@@ -14,7 +14,7 @@ interface MoodColorState {
 
 export const useMoodColor = (userId: string | null) => {
   const [state, setState] = useState<MoodColorState>({
-    moodColor: '#FFFFFF',
+    moodColor: '#10b981', // Default to emerald (Hobbit theme)
     loading: true,
     error: null,
   });
@@ -32,7 +32,7 @@ export const useMoodColor = (userId: string | null) => {
       if (error) throw error;
 
       setState({
-        moodColor: data || '#FFFFFF',
+        moodColor: data || '#10b981', // Default to emerald
         loading: false,
         error: null,
       });

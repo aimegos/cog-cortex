@@ -95,6 +95,45 @@ function AppContent() {
     );
   }
 
+  // Show loading state while pillars are loading
+  if (pillarsLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#1a1c1a]">
+        <div className="text-center">
+          <motion.div
+            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <Sprout className="w-8 h-8 text-white" />
+          </motion.div>
+          <p className="text-white/60 font-mono text-sm tracking-widest">Loading your garden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if pillars failed to load or are empty
+  if (!pillarsLoading && pillars.length === 0) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#1a1c1a] p-8">
+        <div className="text-center max-w-lg">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6 border-2 border-red-500/30">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-4">Database Not Initialized</h2>
+          <p className="text-white/60 font-mono text-sm mb-6 leading-relaxed">
+            Your pillars haven't been seeded yet. Please run the database setup script in your Supabase SQL Editor.
+          </p>
+          <div className="glass-hobbit p-6 text-left">
+            <p className="text-white/40 font-mono text-xs mb-2">📁 File to run:</p>
+            <code className="text-emerald-400 text-xs break-all">supabase_complete_setup.sql</code>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleCapture = (pillarId: string, type: InputType) => {
     setCapturePillarId(pillarId);
     setCaptureType(type);
