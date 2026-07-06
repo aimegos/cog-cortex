@@ -43,14 +43,17 @@ function AppContent() {
   const [activeZone, setActiveZone] = useState<string>('front-yard');
   const [guideIsOpen, setGuideIsOpen] = useState(false);
   const [aesthetic, setAesthetic] = useState<Aesthetic>(Aesthetic.HOBBIT);
-  const [isLight, setIsLight] = useState(false);
+  const [isLight, setIsLight] = useState<boolean>(() => {
+    return localStorage.getItem('j_is_light') === 'true';
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [captureModalOpen, setCaptureModalOpen] = useState(false);
   const [captureType, setCaptureType] = useState<InputType | null>(null);
   const [capturePillarId, setCapturePillarId] = useState<string | null>(null);
 
-  // Sync theme to body class for global CSS targeting
+  // Sync theme to body class for global CSS targeting & persist to localStorage
   useEffect(() => {
+    localStorage.setItem('j_is_light', String(isLight));
     document.body.className = `theme-hobbit ${isLight ? 'theme-light' : ''}`;
   }, [isLight]);
 
