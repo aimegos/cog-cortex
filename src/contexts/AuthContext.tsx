@@ -11,9 +11,13 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isPasswordRecovery: boolean;
   error: Error | null;
   signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<void>;
+  sendMagicLink: (email: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -25,7 +29,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  const getAuthRedirectUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/auth/callback`;
+    }
+
+    return 'https://cog-cortex.vercel.app/auth/callback';
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -61,6 +74,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setSession(session);
         setUser(session?.user || null);
         setError(null);
+        if (_event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
       }
     });
 
@@ -77,6 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+        },
       });
 
       if (error) throw error;
@@ -108,12 +127,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const sendMagicLink = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+          shouldCreateUser: false,
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Magic link failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: getAuthRedirectUrl(),
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Password reset failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
+
+      if (error) throw error;
+      setIsPasswordRecovery(false);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Password update failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw error;
+      setIsPasswordRecovery(false);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign out failed'));
       throw err;
@@ -128,9 +205,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         session,
         isLoading,
+        isPasswordRecovery,
         error,
         signUp,
         signIn,
+        sendMagicLink,
+        requestPasswordReset,
+        updatePassword,
         signOut,
       }}
     >
