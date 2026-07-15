@@ -31,7 +31,7 @@ import { InputType, Aesthetic, Archetype } from './types';
 import { cn } from './lib/utils';
 
 function AppContent() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, error: authError } = useAuth();
 
   // Always call hooks - even if user is null (they return safe defaults)
   const { pillars, loading: pillarsLoading } = usePillars();
@@ -43,14 +43,17 @@ function AppContent() {
   const [activeZone, setActiveZone] = useState<string>('front-yard');
   const [guideIsOpen, setGuideIsOpen] = useState(false);
   const [aesthetic, setAesthetic] = useState<Aesthetic>(Aesthetic.HOBBIT);
-  const [isLight, setIsLight] = useState(false);
+  const [isLight, setIsLight] = useState<boolean>(() => {
+    return localStorage.getItem('j_is_light') === 'true';
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [captureModalOpen, setCaptureModalOpen] = useState(false);
   const [captureType, setCaptureType] = useState<InputType | null>(null);
   const [capturePillarId, setCapturePillarId] = useState<string | null>(null);
 
-  // Sync theme to body class for global CSS targeting
+  // Sync theme to body class for global CSS targeting & persist to localStorage
   useEffect(() => {
+    localStorage.setItem('j_is_light', String(isLight));
     document.body.className = `theme-hobbit ${isLight ? 'theme-light' : ''}`;
   }, [isLight]);
 
@@ -69,6 +72,24 @@ function AppContent() {
     '--sprite-mood-b': rgb.b.toString(),
     '--glow-intensity': isProcessing ? '0.5' : '0.2',
   });
+
+  // Show auth error if initialization failed
+  if (authError) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#1a1c1a] p-8">
+        <div className="text-center max-w-lg">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6 border-2 border-red-500/30">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-4">Authentication Error</h2>
+          <p className="text-white/60 font-mono text-sm mb-6 leading-relaxed break-all">
+            {authError.message}
+          </p>
+          <p className="text-white/40 font-mono text-xs">Check browser console for details</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show auth screen if not logged in and auth has loaded
   if (!authLoading && !user) {

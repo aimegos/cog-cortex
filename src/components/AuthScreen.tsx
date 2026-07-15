@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, Loader, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Loader, AlertCircle, KeyRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 
@@ -18,8 +18,17 @@ const getFriendlyAuthError = (message: string) => {
 };
 
 export const AuthScreen = () => {
-  const { signIn, signUp, isLoading, error } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const {
+    signIn,
+    signUp,
+    sendMagicLink,
+    requestPasswordReset,
+    updatePassword,
+    isPasswordRecovery,
+    isLoading,
+    error,
+  } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,6 +39,50 @@ export const AuthScreen = () => {
     e.preventDefault();
     setLocalError(null);
     setNotice(null);
+
+    if (isPasswordRecovery) {
+      if (!password || !confirmPassword) {
+        setLocalError('Please enter and confirm your new password');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setLocalError('Passwords do not match');
+        return;
+      }
+      if (password.length < 6) {
+        setLocalError('Password must be at least 6 characters');
+        return;
+      }
+
+      try {
+        await updatePassword(password);
+        setPassword('');
+        setConfirmPassword('');
+        setNotice('Password updated. You are signed in now.');
+      } catch (err) {
+        setLocalError(
+          err instanceof Error ? getFriendlyAuthError(err.message) : 'Password update failed'
+        );
+      }
+      return;
+    }
+
+    if (mode === 'reset') {
+      if (!email) {
+        setLocalError('Enter your email address first');
+        return;
+      }
+
+      try {
+        await requestPasswordReset(email);
+        setNotice('Password reset email sent. Use the link in that email to set a new password.');
+      } catch (err) {
+        setLocalError(
+          err instanceof Error ? getFriendlyAuthError(err.message) : 'Password reset failed'
+        );
+      }
+      return;
+    }
 
     if (!email || !password) {
       setLocalError('Please fill in all fields');
@@ -72,6 +125,41 @@ export const AuthScreen = () => {
       }
     }
   };
+
+  const handleMagicLink = async () => {
+    setLocalError(null);
+    setNotice(null);
+
+    if (!email) {
+      setLocalError('Enter your email address first');
+      return;
+    }
+
+    try {
+      await sendMagicLink(email);
+      setNotice('Magic link sent. Check your email and open the link on this device.');
+    } catch (err) {
+      setLocalError(
+        err instanceof Error ? getFriendlyAuthError(err.message) : 'Magic link failed'
+      );
+    }
+  };
+
+  const switchMode = (nextMode: 'signin' | 'signup' | 'reset') => {
+    setMode(nextMode);
+    setLocalError(null);
+    setNotice(null);
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const title = isPasswordRecovery
+    ? 'Set New Password'
+    : mode === 'reset'
+      ? 'Reset Password'
+      : mode === 'signin'
+        ? 'Sign In'
+        : 'Create Account';
 
   return (
     <div className="h-screen w-screen overflow-hidden flex items-center justify-center bg-[#1a1c1a]">
@@ -116,42 +204,50 @@ export const AuthScreen = () => {
         <motion.form
           onSubmit={handleSubmit}
           className="space-y-5 mb-8"
-          key={mode}
+          key={isPasswordRecovery ? 'recovery' : mode}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Email */}
-          <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-white/60 mb-2 block">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full bg-white/5 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition-all text-sm"
-              />
-            </div>
+          <div className="text-center -mb-1">
+            <p className="text-xs text-emerald-300 font-mono uppercase tracking-widest">
+              {title}
+            </p>
           </div>
 
+          {!isPasswordRecovery && (
+            <div>
+              <label className="text-xs font-mono uppercase tracking-widest text-white/60 mb-2 block">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition-all text-sm"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Password */}
-          <div>
+          {mode !== 'reset' && (
+            <div>
             <label className="text-xs font-mono uppercase tracking-widest text-white/60 mb-2 block">
-              Password
+              {isPasswordRecovery ? 'New Password' : 'Password'}
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
               <input
                 type="password"
                 name="password"
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                autoComplete={mode === 'signin' && !isPasswordRecovery ? 'current-password' : 'new-password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -160,9 +256,10 @@ export const AuthScreen = () => {
               />
             </div>
           </div>
+          )}
 
           {/* Confirm Password (signup only) */}
-          {mode === 'signup' && (
+          {(mode === 'signup' || isPasswordRecovery) && (
             <div>
               <label className="text-xs font-mono uppercase tracking-widest text-white/60 mb-2 block">
                 Confirm Password
@@ -223,35 +320,58 @@ export const AuthScreen = () => {
                 <Loader className="w-4 h-4 animate-spin" />
                 Processing...
               </span>
+            ) : isPasswordRecovery ? (
+              'Update Password'
+            ) : mode === 'reset' ? (
+              'Send Reset Email'
             ) : mode === 'signin' ? (
               'Sign In'
             ) : (
               'Create Account'
             )}
           </button>
+
+          {mode === 'signin' && !isPasswordRecovery && (
+            <button
+              type="button"
+              onClick={handleMagicLink}
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-lg font-mono text-sm uppercase tracking-widest transition-all bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              Send Magic Link
+            </button>
+          )}
         </motion.form>
 
         {/* Toggle Mode */}
-        <div className="text-center">
-          <p className="text-xs text-white/40 mb-3">
-            {mode === 'signin'
-              ? "Don't have an account?"
-              : 'Already have an account?'}
-          </p>
-          <button
-            onClick={() => {
-              setMode(mode === 'signin' ? 'signup' : 'signin');
-              setLocalError(null);
-              setNotice(null);
-              setEmail('');
-              setPassword('');
-              setConfirmPassword('');
-            }}
-            className="text-emerald-400 hover:text-emerald-300 text-sm font-mono tracking-widest uppercase transition-colors"
-          >
-            {mode === 'signin' ? 'Create Account' : 'Sign In'}
-          </button>
-        </div>
+        {!isPasswordRecovery && (
+          <div className="text-center space-y-3">
+            <p className="text-xs text-white/40">
+              {mode === 'signin'
+                ? "Don't have an account?"
+                : mode === 'signup'
+                  ? 'Already have an account?'
+                  : 'Remembered your password?'}
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                className="text-emerald-400 hover:text-emerald-300 text-sm font-mono tracking-widest uppercase transition-colors"
+              >
+                {mode === 'signin' ? 'Create Account' : 'Sign In'}
+              </button>
+              {mode !== 'reset' && (
+                <button
+                  onClick={() => switchMode('reset')}
+                  className="text-white/50 hover:text-white/80 text-sm font-mono tracking-widest uppercase transition-colors"
+                >
+                  Reset Password
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Account Setup */}
         <motion.div

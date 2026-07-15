@@ -11,9 +11,13 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isPasswordRecovery: boolean;
   error: Error | null;
   signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<void>;
+  sendMagicLink: (email: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -25,7 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  const getAuthRedirectUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}`;
+    }
+    return 'https://cog-cortex.vercel.app';
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -33,15 +45,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
+        console.log('[Auth] Initializing with Supabase...');
         const { data, error } = await supabaseClient.auth.getSession();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[Auth] Session error:', error);
+          throw error;
+        }
 
         if (mounted) {
+          console.log('[Auth] Session ready:', data?.session?.user?.email || 'no user');
           setSession(data?.session || null);
           setUser(data?.session?.user || null);
         }
       } catch (err) {
+        console.error('[Auth] Init failed:', err);
         if (mounted) {
           setError(err instanceof Error ? err : new Error('Unknown auth error'));
         }
@@ -58,9 +76,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       data: { subscription },
     } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
+        console.log('[Auth] State change:', _event);
         setSession(session);
         setUser(session?.user || null);
         setError(null);
+        if (_event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
       }
     });
 
@@ -77,6 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+        },
       });
 
       if (error) throw error;
@@ -108,12 +133,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const sendMagicLink = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+          shouldCreateUser: false,
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Magic link failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: getAuthRedirectUrl(),
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Password reset failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Password update failed'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const { error } = await supabaseClient.auth.signOut();
+
       if (error) throw error;
+
+      setUser(null);
+      setSession(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign out failed'));
       throw err;
@@ -122,26 +207,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        error,
-        signUp,
-        signIn,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    user,
+    session,
+    isLoading,
+    isPasswordRecovery,
+    error,
+    signUp,
+    signIn,
+    sendMagicLink,
+    requestPasswordReset,
+    updatePassword,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
