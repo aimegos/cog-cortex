@@ -34,10 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getAuthRedirectUrl = () => {
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}/auth/callback`;
+      return `${window.location.origin}`;
     }
-
-    return 'https://cog-cortex.vercel.app/auth/callback';
+    return 'https://cog-cortex.vercel.app';
   };
 
   useEffect(() => {
@@ -46,15 +45,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
+        console.log('[Auth] Initializing with Supabase...');
         const { data, error } = await supabaseClient.auth.getSession();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[Auth] Session error:', error);
+          throw error;
+        }
 
         if (mounted) {
+          console.log('[Auth] Session ready:', data?.session?.user?.email || 'no user');
           setSession(data?.session || null);
           setUser(data?.session?.user || null);
         }
       } catch (err) {
+        console.error('[Auth] Init failed:', err);
         if (mounted) {
           setError(err instanceof Error ? err : new Error('Unknown auth error'));
         }
@@ -71,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       data: { subscription },
     } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
+        console.log('[Auth] State change:', _event);
         setSession(session);
         setUser(session?.user || null);
         setError(null);
@@ -175,7 +181,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { error } = await supabaseClient.auth.updateUser({ password });
 
       if (error) throw error;
-      setIsPasswordRecovery(false);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Password update failed'));
       throw err;
@@ -189,8 +194,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsLoading(true);
       setError(null);
       const { error } = await supabaseClient.auth.signOut();
+
       if (error) throw error;
-      setIsPasswordRecovery(false);
+
+      setUser(null);
+      setSession(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Sign out failed'));
       throw err;
@@ -199,30 +207,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        isPasswordRecovery,
-        error,
-        signUp,
-        signIn,
-        sendMagicLink,
-        requestPasswordReset,
-        updatePassword,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    user,
+    session,
+    isLoading,
+    isPasswordRecovery,
+    error,
+    signUp,
+    signIn,
+    sendMagicLink,
+    requestPasswordReset,
+    updatePassword,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
